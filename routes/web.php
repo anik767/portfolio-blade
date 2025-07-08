@@ -1,53 +1,40 @@
 <?php
+
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ProjectPostController;
 use App\Http\Controllers\ContactController;
 
-/*
-|--------------------------------------------------------------------------
-| Public Routes (No Auth Required)
-|--------------------------------------------------------------------------
-*/
+// Public Site
+Route::get('/', function () {
+    return view('site.home');
+})->name('home');
 
-// Public Project Posts — no middleware needed
-Route::get('/project-posts', [ProjectPostController::class, 'index']);
+Route::get('/posts', [ProjectPostController::class, 'publicList'])->name('posts.list');
+Route::get('/posts/{slug}', [ProjectPostController::class, 'publicSingle'])->name('posts.single');
 
+// Contact form (optional)
+Route::get('/contact', [ContactController::class, 'showForm'])->name('contact.form');
+Route::post('/contact', [ContactController::class, 'submit'])->name('contact.submit');
 
-// Contact submit (public)
+// Admin Auth
+Route::get('/login', [AuthController::class, 'showLogin'])->name('admin.login');
+Route::post('/login', [AuthController::class, 'login'])->name('admin.login.submit');
+Route::post('/logout', [AuthController::class, 'logout'])->name('admin.logout');
 
-Route::post('/contact', [ContactController::class, 'submit']);
-/*
-|--------------------------------------------------------------------------
-| Web Routes (Session + CSRF required, no auth)
-|--------------------------------------------------------------------------
-*/
+// Protected Admin routes
+Route::middleware(['auth', 'admin'])->prefix('admin')->group(function () {
+    Route::get('/dashboard', [AuthController::class, 'dashboard'])->name('admin.dashboard');
 
-// Login route — needs 'web' middleware for session and CSRF cookies
-Route::middleware('web')->post('/login', [AuthController::class, 'login'])->name('login');
+    // Posts management
+    Route::get('/posts', [ProjectPostController::class, 'index'])->name('admin.posts');
+    Route::get('/posts/create', [ProjectPostController::class, 'create'])->name('admin.posts.create');
+    Route::post('/posts', [ProjectPostController::class, 'store'])->name('admin.posts.store');
+    Route::get('/posts/{id}/edit', [ProjectPostController::class, 'edit'])->name('admin.posts.edit');
+    Route::put('/posts/{id}', [ProjectPostController::class, 'update'])->name('admin.posts.update');
+    Route::delete('/posts/{id}', [ProjectPostController::class, 'destroy'])->name('admin.posts.delete');
 
-/*
-|--------------------------------------------------------------------------
-| Protected Routes (Require Sanctum Auth + Web middleware)
-|--------------------------------------------------------------------------
-*/
-
-Route::middleware(['web', 'auth:sanctum'])->prefix('admin')->group(function () {
-    // Logout route
-    Route::post('/logout', [AuthController::class, 'logout']);
-
-    // Authenticated user info
-    Route::get('/user', [AuthController::class, 'user']);
-    Route::post('/password-reset', [AuthController::class, 'resetPassword']);
-    // Project Posts CRUD for authenticated users
-    Route::get('/project-posts/{id}', [ProjectPostController::class, 'show']);
-    Route::post('/project-posts', [ProjectPostController::class, 'store']);
-    Route::put('/project-posts/{id}', [ProjectPostController::class, 'update']);
-    Route::delete('/project-posts/{id}', [ProjectPostController::class, 'destroy']);
-
-    // Contact admin routes
-    Route::get('/contacts', [ContactController::class, 'index']);
-    Route::delete('/contacts/{id}', [ContactController::class, 'destroy']);
+    // Contacts management (optional)
+    Route::get('/contacts', [ContactController::class, 'index'])->name('admin.contacts');
+    Route::delete('/contacts/{id}', [ContactController::class, 'destroy'])->name('admin.contacts.delete');
 });
-
-

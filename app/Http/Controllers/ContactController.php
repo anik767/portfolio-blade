@@ -5,8 +5,15 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Contact;
 use Illuminate\Support\Facades\Log;
+
 class ContactController extends Controller
 {
+    // Show contact form (public)
+    public function showForm()
+    {
+        return view('site.contact_form');
+    }
+
     // Submit contact form
     public function submit(Request $request)
     {
@@ -17,56 +24,33 @@ class ContactController extends Controller
         ]);
 
         try {
-            $contact = Contact::create($validated);
+            Contact::create($validated);
 
-            return response()->json([
-                'message' => 'Contact form submitted and saved successfully',
-                'contact' => $contact,
-            ], 201);
+            return redirect()->back()->with('success', 'Thank you for contacting us!');
         } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'Failed to save contact data',
-                'error' => $e->getMessage(),
-            ], 500);
+            Log::error('Failed to save contact form: '.$e->getMessage());
+
+            return redirect()->back()->withErrors('Failed to submit contact form. Please try again later.');
         }
     }
 
-    // Get all contacts
+    // Admin: list contacts with pagination
     public function index()
-{
-    try {
-        $contacts = Contact::orderBy('created_at', 'desc')->get();
-
-        return response()->json($contacts, 200);
-    } catch (\Exception $e) {
-        Log::error('Failed to fetch contacts', [
-            'error' => $e->getMessage(),
-        ]);
-
-        return response()->json([
-            'message' => 'Failed to fetch contacts',
-            'error' => $e->getMessage(),
-        ], 500);
+    {
+        $contacts = Contact::orderBy('created_at', 'desc')->paginate(15);
+        return view('admin.contacts', compact('contacts'));
     }
-}
 
-
-
-    // Delete a contact by id
+    // Admin: delete contact
     public function destroy($id)
     {
         try {
             $contact = Contact::findOrFail($id);
             $contact->delete();
 
-            return response()->json([
-                'message' => 'Contact deleted successfully',
-            ], 200);
+            return redirect()->route('admin.contacts')->with('success', 'Contact deleted successfully');
         } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'Failed to delete contact',
-                'error' => $e->getMessage(),
-            ], 500);
+            return redirect()->route('admin.contacts')->withErrors('Failed to delete contact');
         }
     }
 }

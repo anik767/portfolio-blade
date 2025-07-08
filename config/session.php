@@ -5,7 +5,7 @@ use Illuminate\Support\Str;
 return [
 
     // Session driver - database or file (choose one that suits you)
-    'driver' => env('SESSION_DRIVER', 'database'),
+    'driver' => env('SESSION_DRIVER', 'file'),
 
     // How long (in minutes) the session remains valid (default 120)
     'lifetime' => (int) env('SESSION_LIFETIME', 120),
@@ -46,7 +46,7 @@ return [
      * For local development often: 'localhost' or 'localhost:3000'
      * If this doesn't match frontend domain, cookies may not be sent properly.
      */
-    'domain' => env('SESSION_DOMAIN', 'localhost'),
+    'domain' => env('SESSION_DOMAIN', null),
 
     /*
      * Secure cookies: true if you use HTTPS, false if local dev with HTTP.

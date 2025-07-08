@@ -8,85 +8,72 @@ use Illuminate\Support\Facades\Storage;
 
 class ProjectPostController extends Controller
 {
-    // List posts with pagination
+    // Admin: List posts with pagination (blade view)
     public function index()
-{
-    // Order posts by created_at descending (newest first)
-    $posts = ProjectPost::orderBy('created_at', 'desc')->paginate(6);
+    {
+        $posts = ProjectPost::orderBy('created_at', 'desc')->paginate(6);
+        return view('admin.posts', compact('posts'));
+    }
 
-    $posts->getCollection()->transform(function ($post) {
-        $post->image_url = $post->image ? asset('storage/' . $post->image) : null;
-        return $post;
-    });
+    // Admin: Show create post form
+    public function create()
+    {
+        return view('admin.create_post');
+    }
 
-    return response()->json($posts);
-}
-
-    // Create a new post with optional image upload
+    // Admin: Store new post
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'title'   => 'required|string|max:255',
-            'git_url'   => 'required|string|max:255',
-            'project_url'   => 'required|string|max:255',
-            'content' => 'required|string',
-            'image'   => 'nullable|image|max:2048',
+            'title'       => 'required|string|max:255',
+            'git_url'     => 'required|string|max:255',
+            'project_url' => 'required|string|max:255',
+            'content'     => 'required|string',
+            'image'       => 'nullable|image|max:2048',
         ]);
 
         if ($request->hasFile('image')) {
-            $path = $request->file('image')->store('posts', 'public');
-            $validated['image'] = $path;
+            $validated['image'] = $request->file('image')->store('posts', 'public');
         }
 
-        $post = ProjectPost::create($validated);
-        $post->image_url = $post->image ? asset('storage/' . $post->image) : null;
+        ProjectPost::create($validated);
 
-        return response()->json([
-            'message' => 'Post created successfully!',
-            'post'    => $post,
-        ], 201);
+        return redirect()->route('admin.posts')->with('success', 'Post created successfully!');
     }
 
-    // Show single post
-    public function show($id)
+    // Admin: Show edit form
+    public function edit($id)
     {
         $post = ProjectPost::findOrFail($id);
-        $post->image_url = $post->image ? asset('storage/' . $post->image) : null;
-
-        return response()->json($post);
+        return view('admin.edit_post', compact('post'));
     }
 
-    // Update post with optional image upload
+    // Admin: Update post
     public function update(Request $request, $id)
     {
         $post = ProjectPost::findOrFail($id);
 
         $validated = $request->validate([
-            'title'   => 'required|string|max:255',
-            'git_url'   => 'required|string|max:255',
-            'project_url'   => 'required|string|max:255',
-            'content' => 'required|string',
-            'image'   => 'nullable|image|max:2048',
+            'title'       => 'required|string|max:255',
+            'git_url'     => 'required|string|max:255',
+            'project_url' => 'required|string|max:255',
+            'content'     => 'required|string',
+            'image'       => 'nullable|image|max:2048',
         ]);
 
         if ($request->hasFile('image')) {
             if ($post->image && Storage::disk('public')->exists($post->image)) {
                 Storage::disk('public')->delete($post->image);
             }
-            $path = $request->file('image')->store('posts', 'public');
-            $validated['image'] = $path;
+            $validated['image'] = $request->file('image')->store('posts', 'public');
         }
 
         $post->update($validated);
-        $post->image_url = $post->image ? asset('storage/' . $post->image) : null;
 
-        return response()->json([
-            'message' => 'Post updated successfully!',
-            'post'    => $post,
-        ]);
+        return redirect()->route('admin.posts')->with('success', 'Post updated successfully!');
     }
 
-    // Delete post and image file
+    // Admin: Delete post
     public function destroy($id)
     {
         $post = ProjectPost::findOrFail($id);
@@ -97,6 +84,20 @@ class ProjectPostController extends Controller
 
         $post->delete();
 
-        return response()->json(['message' => 'Post deleted successfully!']);
+        return redirect()->route('admin.posts')->with('success', 'Post deleted successfully!');
+    }
+
+    // Public: List posts with pagination for site
+    public function publicList()
+    {
+        $posts = ProjectPost::orderBy('created_at', 'desc')->paginate(6);
+        return view('site.posts', compact('posts'));
+    }
+
+    // Public: Show single post by slug
+    public function publicSingle($slug)
+    {
+        $post = ProjectPost::where('slug', $slug)->firstOrFail();
+        return view('site.single_post', compact('post'));
     }
 }

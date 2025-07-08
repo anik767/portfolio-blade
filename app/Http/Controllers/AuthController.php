@@ -8,26 +8,56 @@ use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
-    public function login(Request $request)
-{
-    $credentials = $request->only('email', 'password');
-
-    if (!Auth::attempt($credentials)) {
-        return response()->json(['message' => 'Invalid credentials'], 401);
+    // Show login form
+    public function showLogin()
+    {
+        return view('auth.login');
     }
 
-    $request->session()->regenerate();
+    // Handle login form submission
+    public function login(Request $request)
+    {
+        $credentials = $request->validate([
+            'email' => ['required', 'email'],
+            'password' => ['required'],
+        ]);
 
-    /** @var User $user */
-    $user = Auth::user();
+        if (!Auth::attempt($credentials)) {
+            return back()->withErrors([
+                'email' => 'Invalid credentials.',
+            ])->withInput();
+        }
 
-    if ($user) {
+        $request->session()->regenerate();
+        /** @var User $user */
+        $user = Auth::user();
+
+        // Optionally store IP
         $user->ip_address = $request->ip();
         $user->save();
+
+        // Redirect to admin dashboard or wherever
+        return redirect()->intended(route('admin.dashboard'));
     }
 
-    return response()->json(['message' => 'Login successful']);
-}
+    // Logout user
+    public function logout(Request $request)
+    {
+        Auth::logout();
+
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect(route('admin.login'))->with('status', 'Logged out successfully.');
+    }
+
+    // Show password reset form (optional, you need blade for this)
+    public function showResetPasswordForm()
+    {
+        return view('auth.reset_password');
+    }
+
+    // Handle password reset
     public function resetPassword(Request $request)
     {
         $request->validate([
@@ -38,36 +68,12 @@ class AuthController extends Controller
         $user = $request->user();
 
         if (!Hash::check($request->current_password, $user->password)) {
-            return response()->json(['message' => 'Current password is incorrect'], 403);
+            return back()->withErrors(['current_password' => 'Current password is incorrect']);
         }
 
         $user->password = Hash::make($request->password);
         $user->save();
 
-        return response()->json(['message' => 'Password updated successfully']);
-    }
-
-
-    public function user(Request $request)
-    {
-        return response()->json([
-            'name' => $request->user()->name,
-            'email' => $request->user()->email,
-            'is_admin' => $request->user()->is_admin,
-        ]);
-    }
-
-
-    public function logout(Request $request)
-    {
-        Auth::guard('web')->logout();
-
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
-
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Logged out successfully',
-        ]);
+        return redirect()->route('admin.dashboard')->with('success', 'Password updated successfully');
     }
 }
