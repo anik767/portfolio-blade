@@ -10,6 +10,10 @@ Route::get('/', function () {
     return view('site.home');
 })->name('home');
 
+Route::get('/about', function () {
+    return view('site.about');
+})->name('about');
+
 Route::get('/posts', [ProjectPostController::class, 'publicList'])->name('posts.list');
 Route::get('/posts/{slug}', [ProjectPostController::class, 'publicSingle'])->name('posts.single');
 
